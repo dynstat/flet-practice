@@ -10,6 +10,7 @@ class WebSocketVisualizer:
         self.timestamps = deque(maxlen=max_points)
         self.values = deque(maxlen=max_points)
         self.start_time = time.time()
+        self.running = True  # Flag to control the simulation loop
 
     def create_chart(self):
         data_series = ft.LineChartData(
@@ -53,16 +54,28 @@ async def main(page: ft.Page):
     chart = visualizer.create_chart()
     
     async def simulate_websocket_activity():
-        while True:
+        while visualizer.running:
             try:
                 value = random.uniform(0, 100)
                 visualizer.update_chart(chart, value)
-                await page.update_async()
+                page.update()
                 await asyncio.sleep(1)
             except Exception as e:
                 print(f"Error in websocket simulation: {e}")
                 break
 
+    async def cleanup():
+        # Cleanup function to handle application shutdown
+        visualizer.running = False
+        if hasattr(page, 'task'):
+            page.task.cancel()
+            try:
+                await page.task
+            except asyncio.CancelledError:
+                pass
+
+    page.on_close = cleanup  # Register cleanup function
+    
     page.add(
         ft.Container(
             content=ft.Column([
