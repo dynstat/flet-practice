@@ -5,12 +5,13 @@ import random
 from collections import deque
 
 class WebSocketVisualizer:
-    def __init__(self, max_points=50):
+    def __init__(self, max_points=50, window_width=10):
         self.max_points = max_points
+        self.window_width = window_width  # Width of the viewing window
         self.timestamps = deque(maxlen=max_points)
         self.values = deque(maxlen=max_points)
         self.start_time = time.time()
-        self.running = True  # Flag to control the simulation loop
+        self.running = True
 
     def create_chart(self):
         data_series = ft.LineChartData(
@@ -34,12 +35,19 @@ class WebSocketVisualizer:
             tooltip_bgcolor=ft.colors.with_opacity(0.8, ft.colors.WHITE),
             expand=True,
             data_series=[data_series],
+            min_x=0,  # Initial minimum x value
+            max_x=self.window_width,  # Initial maximum x value
         )
 
     def update_chart(self, chart, value):
         current_time = time.time() - self.start_time
         self.timestamps.append(current_time)
         self.values.append(value)
+
+        # Update the visible window
+        if current_time > self.window_width:
+            chart.min_x = current_time - self.window_width
+            chart.max_x = current_time
 
         chart.data_series[0].data_points = [
             ft.LineChartDataPoint(x, y) 
@@ -50,7 +58,7 @@ async def main(page: ft.Page):
     page.title = "WebSocket Activity Visualizer"
     page.theme_mode = ft.ThemeMode.DARK
     
-    visualizer = WebSocketVisualizer()
+    visualizer = WebSocketVisualizer(window_width=10)  # Set window width to 10 units
     chart = visualizer.create_chart()
     
     async def simulate_websocket_activity():
@@ -59,13 +67,12 @@ async def main(page: ft.Page):
                 value = random.uniform(0, 100)
                 visualizer.update_chart(chart, value)
                 page.update()
-                await asyncio.sleep(1)
+                await asyncio.sleep(0.2)
             except Exception as e:
                 print(f"Error in websocket simulation: {e}")
                 break
 
     async def cleanup():
-        # Cleanup function to handle application shutdown
         visualizer.running = False
         if hasattr(page, 'task'):
             page.task.cancel()
@@ -74,7 +81,7 @@ async def main(page: ft.Page):
             except asyncio.CancelledError:
                 pass
 
-    page.on_close = cleanup  # Register cleanup function
+    page.on_close = cleanup
     
     page.add(
         ft.Container(
