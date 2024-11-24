@@ -7,11 +7,12 @@ from collections import deque
 class WebSocketVisualizer:
     def __init__(self, max_points=50, window_width=10):
         self.max_points = max_points
-        self.window_width = window_width  # Width of the viewing window
+        self.window_width = window_width
         self.timestamps = deque(maxlen=max_points)
         self.values = deque(maxlen=max_points)
         self.start_time = time.time()
         self.running = True
+        self.points_per_window = 50  # Number of points to show in the window
 
     def create_chart(self):
         data_series = ft.LineChartData(
@@ -39,26 +40,38 @@ class WebSocketVisualizer:
             max_x=self.window_width,
             border=None,
             bgcolor=ft.colors.TRANSPARENT,
-            animate=0,  # Set to 0 to disable animation
+            animate=0,
         )
 
     def update_chart(self, chart, value):
         current_time = time.time() - self.start_time
+        
+        # Calculate time step to maintain consistent point density
+        if len(self.timestamps) > 0:
+            last_time = self.timestamps[-1]
+            if current_time - last_time < self.window_width / self.points_per_window:
+                return  # Skip update if points would be too dense
+        
         self.timestamps.append(current_time)
         self.values.append(value)
 
         # Update the visible window
         if current_time > self.window_width:
-            chart.min_x = current_time - self.window_width
+            window_start = current_time - self.window_width
+            chart.min_x = window_start
             chart.max_x = current_time
             
-            # Filter points to only show those within the current window
+            # Filter points to maintain consistent density
             visible_points = [
                 (t, v) for t, v in zip(self.timestamps, self.values)
-                if t >= (current_time - self.window_width)
+                if t >= window_start
             ]
             
-            # Update data points with only visible points
+            # Ensure we don't have too many points in the window
+            if len(visible_points) > self.points_per_window:
+                step = len(visible_points) // self.points_per_window
+                visible_points = visible_points[::step]
+            
             if visible_points:
                 timestamps, values = zip(*visible_points)
                 chart.data_series[0].data_points = [
@@ -66,7 +79,6 @@ class WebSocketVisualizer:
                     for x, y in zip(timestamps, values)
                 ]
         else:
-            # For initial window, show all points
             chart.data_series[0].data_points = [
                 ft.LineChartDataPoint(x, y) 
                 for x, y in zip(self.timestamps, self.values)
@@ -85,7 +97,7 @@ async def main(page: ft.Page):
                 value = random.uniform(0, 100)
                 visualizer.update_chart(chart, value)
                 page.update()
-                await asyncio.sleep(0.2)
+                await asyncio.sleep(0.01)
             except Exception as e:
                 print(f"Error in websocket simulation: {e}")
                 break
