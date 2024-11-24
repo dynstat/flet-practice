@@ -51,11 +51,26 @@ class WebSocketVisualizer:
         if current_time > self.window_width:
             chart.min_x = current_time - self.window_width
             chart.max_x = current_time
-
-        chart.data_series[0].data_points = [
-            ft.LineChartDataPoint(x, y) 
-            for x, y in zip(self.timestamps, self.values)
-        ]
+            
+            # Filter points to only show those within the current window
+            visible_points = [
+                (t, v) for t, v in zip(self.timestamps, self.values)
+                if t >= (current_time - self.window_width)
+            ]
+            
+            # Update data points with only visible points
+            if visible_points:
+                timestamps, values = zip(*visible_points)
+                chart.data_series[0].data_points = [
+                    ft.LineChartDataPoint(x, y) 
+                    for x, y in zip(timestamps, values)
+                ]
+        else:
+            # For initial window, show all points
+            chart.data_series[0].data_points = [
+                ft.LineChartDataPoint(x, y) 
+                for x, y in zip(self.timestamps, self.values)
+            ]
 
 async def main(page: ft.Page):
     page.title = "WebSocket Activity Visualizer"
