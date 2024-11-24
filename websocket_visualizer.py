@@ -24,19 +24,22 @@ class WebSocketVisualizer:
         return ft.LineChart(
             width=600,
             height=200,
-            horizontal_grid_lines=ft.ChartGridLines(interval=10, color=ft.colors.GREY_400, width=1),
-            vertical_grid_lines=ft.ChartGridLines(interval=10, color=ft.colors.GREY_400, width=1),
             left_axis=ft.ChartAxis(
                 labels_size=40,
+                labels_interval=20,
             ),
             bottom_axis=ft.ChartAxis(
                 labels_size=40,
+                labels_interval=2,
             ),
             tooltip_bgcolor=ft.colors.with_opacity(0.8, ft.colors.WHITE),
             expand=True,
             data_series=[data_series],
-            min_x=0,  # Initial minimum x value
-            max_x=self.window_width,  # Initial maximum x value
+            min_x=0,
+            max_x=self.window_width,
+            border=None,
+            bgcolor=ft.colors.TRANSPARENT,
+            animate=0,  # Set to 0 to disable animation
         )
 
     def update_chart(self, chart, value):
